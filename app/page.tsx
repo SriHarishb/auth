@@ -1,7 +1,7 @@
 // app/login/page.tsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getClientAuthSafe } from "@/lib/firebase-client";
 import {
@@ -34,7 +34,8 @@ function clearPendingRedirectKeys() {
   }
 }
 
-export default function LoginRedirectPage() {
+// The inner component actually uses useSearchParams and is wrapped by Suspense
+function LoginRedirectInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/dashboard";
@@ -113,4 +114,13 @@ export default function LoginRedirectPage() {
 
   // Minimal UX while redirecting
   return <div style={{ padding: 24 }}>Redirecting to Google sign-in…</div>;
+}
+
+// Export a wrapper that provides the Suspense boundary around the component using useSearchParams
+export default function LoginRedirectPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
+      <LoginRedirectInner />
+    </Suspense>
+  );
 }
