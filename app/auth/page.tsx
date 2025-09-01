@@ -10,7 +10,16 @@ import { GoogleAuthProvider, signInWithPopup, type User } from "firebase/auth"
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState<User | null>(null)
+  const [error, setError] = useState<string>("")
   const router = useRouter()
+
+  useEffect(() => {
+    // Check if user is already authenticated
+    const auth = getClientAuthSafe()
+    if (auth?.currentUser) {
+      router.replace('/welcome')
+    }
+  }, [router])
 
   const signInWithGoogle = async () => {
     setIsLoading(true)
@@ -23,7 +32,13 @@ export default function AuthPage() {
         throw new Error("Auth not initialized. Check Firebase configuration.")
       }
 
-      console.log("Auth initialized, proceeding with sign in...")
+      // Log configuration for debugging
+      console.log("Auth Configuration:", {
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        currentOrigin: window.location.origin,
+        isLocalhost: window.location.hostname === 'localhost'
+      })
+
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({
         prompt: 'select_account'
@@ -33,12 +48,17 @@ export default function AuthPage() {
       console.log("Sign in successful, user ID:", result.user.uid)
       setUser(result.user)
       
-      // Wait longer to ensure Firestore sync completes
-      console.log("Waiting for Firestore sync...")
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Use a shorter wait time and check auth state
+      console.log("Verifying authentication state...")
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
-      console.log("Redirecting to welcome page...")
-      router.push('/welcome')
+      if (auth.currentUser) {
+        console.log("Auth state verified, redirecting to welcome page...")
+        // Use replace instead of push to prevent back navigation to login
+        router.replace('/welcome')
+      } else {
+        throw new Error("Authentication state not persisted")
+      }
     } catch (error: any) {
       console.error("Detailed auth error:", {
         code: error.code,
@@ -58,21 +78,10 @@ export default function AuthPage() {
       }
       
       setError(errorMessage)
-      setIsLoading(false)
     } finally {
-      if (isLoading) setIsLoading(false)
+      setIsLoading(false)
     }
   }
-
-  const [error, setError] = useState<string>("")
-
-  useEffect(() => {
-    // Check if auth is initialized
-    const auth = getClientAuthSafe()
-    if (!auth) {
-      setError("Authentication not initialized")
-    }
-  }, [])
 
   const goBack = () => {
     router.push("/")
@@ -102,6 +111,7 @@ export default function AuthPage() {
                 onClick={signInWithGoogle} 
                 variant="outline" 
                 className="w-full bg-white hover:bg-gray-50 text-gray-900 border-gray-300"
+                disabled={isLoading}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path
@@ -123,19 +133,23 @@ export default function AuthPage() {
                 </svg>
                 Sign in with Google
               </Button>
-              <Button onClick={goBack} variant="outline" className="w-full bg-transparent">
+              <Button 
+                onClick={goBack} 
+                variant="outline" 
+                className="w-full bg-transparent"
+                disabled={isLoading}
+              >
                 Back to Home
               </Button>
             </div>
+          )}
+          {error && (
+            <p className="text-sm text-red-500 mt-2">{error}</p>
           )}
         </CardContent>
       </Card>
     </div>
   )
-}
-function initializeFirebaseAuth() {
-  const auth = getClientAuthSafe()
-  if (!auth) return
 
   // Optionally, listen for auth state changes and set user if needed
   // Example:
