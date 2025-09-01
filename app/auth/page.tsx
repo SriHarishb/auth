@@ -14,22 +14,53 @@ export default function AuthPage() {
 
   const signInWithGoogle = async () => {
     setIsLoading(true)
+    setError("")
 
     try {
+      console.log("Starting Google Sign In...")
       const auth = getClientAuthSafe()
       if (!auth) {
-        throw new Error("Auth not initialized")
+        throw new Error("Auth not initialized. Check Firebase configuration.")
       }
 
+      console.log("Auth initialized, proceeding with sign in...")
       const provider = new GoogleAuthProvider()
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      })
+
       const result = await signInWithPopup(auth, provider)
+      console.log("Sign in successful, user ID:", result.user.uid)
       setUser(result.user)
       
-      // After successful sign in, redirect to home page
-      router.push('/')
-    } catch (error) {
-      console.error("Auth error:", error)
+      // Wait longer to ensure Firestore sync completes
+      console.log("Waiting for Firestore sync...")
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      console.log("Redirecting to welcome page...")
+      router.push('/welcome')
+    } catch (error: any) {
+      console.error("Detailed auth error:", {
+        code: error.code,
+        message: error.message,
+        credential: error.credential,
+        email: error.email,
+        phoneNumber: error.phoneNumber
+      })
+      
+      let errorMessage = "Failed to sign in with Google"
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Sign-in popup was closed. Please try again."
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "Sign-in popup was blocked. Please allow popups for this site."
+      } else if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = "This domain is not authorized for Firebase Authentication. Please check your Firebase configuration."
+      }
+      
+      setError(errorMessage)
       setIsLoading(false)
+    } finally {
+      if (isLoading) setIsLoading(false)
     }
   }
 

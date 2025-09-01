@@ -20,13 +20,13 @@ import {
 } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCRFmM4Tr-lMDp0ZaktN3OnZV3z4G4-zAw",
-  authDomain: "fir-3b2fa.firebaseapp.com",
-  projectId: "fir-3b2fa",
-  storageBucket: "fir-3b2fa.firebasestorage.app",
-  messagingSenderId: "313227259174",
-  appId: "1:313227259174:web:d27b14c7414c4b325565e7",
-  measurementId: "G-XTVVZD55FJ",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase
