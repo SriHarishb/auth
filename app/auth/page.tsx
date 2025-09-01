@@ -4,8 +4,8 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { auth, GoogleAuthProvider, signInWithPopup, type User } from "@/lib/firebase"
 import { getClientAuthSafe } from "@/lib/firebase-client"
-import { GoogleAuthProvider, signInWithPopup, type User } from "firebase/auth"
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false)
