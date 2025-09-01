@@ -13,19 +13,24 @@ export default function WelcomeLayout({
   const router = useRouter()
 
   useEffect(() => {
-    const auth = getClientAuthSafe()
-    if (!auth) {
-      router.push('/auth')
-      return
-    }
+    let unsubscribe: (() => void) | undefined;
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
+    getClientAuthSafe().then((auth) => {
+      if (!auth) {
         router.push('/auth')
+        return
       }
+
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          router.push('/auth')
+        }
+      })
     })
 
-    return () => unsubscribe()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
   }, [router])
 
   return children

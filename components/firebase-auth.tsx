@@ -11,16 +11,16 @@ export default function FirebaseAuthUI() {
   const router = useRouter()
 
   const signInWithGoogle = async () => {
-    const auth = getClientAuthSafe()
-    if (!auth) {
-      setError("Authentication not initialized")
-      return
-    }
-
     setIsLoading(true)
     setError("")
 
     try {
+      const auth = await getClientAuthSafe()
+      if (!auth) {
+        setError("Authentication not initialized")
+        return
+      }
+
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({
         prompt: 'select_account'
