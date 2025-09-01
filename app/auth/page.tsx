@@ -1,87 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { auth, GoogleAuthProvider, signInWithPopup, type User } from "@/lib/firebase"
-import { getClientAuthSafe } from "@/lib/firebase-client"
+import { useFirebaseAuth } from "@/hooks/use-firebase-auth"
 
 export default function AuthPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
-  const [error, setError] = useState<string>("")
   const router = useRouter()
+  const { user, signInWithGoogle, isLoading, error } = useFirebaseAuth()
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const auth = getClientAuthSafe()
-    if (auth?.currentUser) {
+    if (user) {
       router.replace('/welcome')
     }
-  }, [router])
-
-  const signInWithGoogle = async () => {
-    setIsLoading(true)
-    setError("")
-
-    try {
-      console.log("Starting Google Sign In...")
-      const auth = getClientAuthSafe()
-      if (!auth) {
-        throw new Error("Auth not initialized. Check Firebase configuration.")
-      }
-
-      // Log configuration for debugging
-      console.log("Auth Configuration:", {
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        currentOrigin: window.location.origin,
-        isLocalhost: window.location.hostname === 'localhost'
-      })
-
-      const provider = new GoogleAuthProvider()
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      })
-
-      const result = await signInWithPopup(auth, provider)
-      console.log("Sign in successful, user ID:", result.user.uid)
-      setUser(result.user)
-      
-      // Use a shorter wait time and check auth state
-      console.log("Verifying authentication state...")
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      if (auth.currentUser) {
-        console.log("Auth state verified, redirecting to welcome page...")
-        // Use replace instead of push to prevent back navigation to login
-        router.replace('/welcome')
-      } else {
-        throw new Error("Authentication state not persisted")
-      }
-    } catch (error: any) {
-      console.error("Detailed auth error:", {
-        code: error.code,
-        message: error.message,
-        credential: error.credential,
-        email: error.email,
-        phoneNumber: error.phoneNumber
-      })
-      
-      let errorMessage = "Failed to sign in with Google"
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "Sign-in popup was closed. Please try again."
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = "Sign-in popup was blocked. Please allow popups for this site."
-      } else if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "This domain is not authorized for Firebase Authentication. Please check your Firebase configuration."
-      }
-      
-      setError(errorMessage)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  }, [user, router])
 
   const goBack = () => {
     router.push("/")

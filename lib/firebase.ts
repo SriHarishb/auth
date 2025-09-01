@@ -19,9 +19,17 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+// Initialize Firebase only on the client side
+let auth;
+
+if (typeof window !== "undefined") {
+  try {
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+  } catch (error) {
+    console.error("Firebase initialization error:", error);
+  }
+}
 
 export { auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged };
 export type { User };
