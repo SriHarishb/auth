@@ -20,18 +20,29 @@ export function useFirebaseAuth(): FirebaseAuthHook {
   const router = useRouter()
 
   useEffect(() => {
-    const auth = getClientAuthSafe()
-    if (!auth) return
+    let unsubscribe: (() => void) | undefined;
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user)
-    })
+    const initAuth = async () => {
+      const auth = await getClientAuthSafe();
+      if (!auth) return;
 
-    return () => unsubscribe()
+      // Initialize auth state listener
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+      });
+    };
+
+    initAuth();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [])
 
   const signInWithGoogle = async () => {
-    const auth = getClientAuthSafe()
+    const auth = await getClientAuthSafe()
     if (!auth) {
       setError("Authentication not initialized")
       return

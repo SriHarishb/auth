@@ -13,37 +13,43 @@ export default function WelcomePage() {
   const router = useRouter()
 
   useEffect(() => {
-    const auth = getClientAuthSafe()
-    console.log("Welcome page mounted, checking auth state...")
-    
-    if (!auth) {
-      console.log("No auth instance found, redirecting to login...")
-      router.replace('/auth')
-      return
-    }
+    let unsubscribe: (() => void) | undefined;
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("Auth state changed:", user ? "User logged in" : "No user")
-      if (user) {
-        setUser(user)
-      } else {
-        router.replace('/auth')
+    getClientAuthSafe().then((auth) => {
+      console.log("Welcome page mounted, checking auth state...");
+
+      if (!auth) {
+        console.log("No auth instance found, redirecting to login...");
+        router.replace('/auth');
+        setLoading(false);
+        return;
       }
-      setLoading(false)
-    })
 
-    // Immediate check for current user
-    if (auth.currentUser) {
-      console.log("Current user found:", auth.currentUser.uid)
-      setUser(auth.currentUser)
-      setLoading(false)
-    }
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        console.log("Auth state changed:", user ? "User logged in" : "No user");
+        if (user) {
+          setUser(user);
+        } else {
+          router.replace('/auth');
+        }
+        setLoading(false);
+      });
 
-    return () => unsubscribe()
+      // Immediate check for current user
+      if (auth.currentUser) {
+        console.log("Current user found:", auth.currentUser.uid);
+        setUser(auth.currentUser);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [router])
 
   const handleSignOut = async () => {
-    const auth = getClientAuthSafe()
+    const auth = await getClientAuthSafe()
     if (auth) {
       try {
         await signOut(auth)

@@ -66,10 +66,18 @@ async function initializeFirebase() {
   if (typeof window === "undefined") return null;
   if (app) return app;
 
-  const config = await getFirebaseConfig();
-  app = getApps().length ? getApp() : initializeApp(config);
-  db = getFirestore(app);
-  return app;
+  try {
+    const config = await getFirebaseConfig();
+    app = getApps().length ? getApp() : initializeApp(config);
+    
+    // Initialize Firestore
+    db = getFirestore(app);
+    
+    return app;
+  } catch (error) {
+    console.error("[Firebase] Failed to initialize:", error);
+    return null;
+  }
 }
 
 // Safe getter: never throws on server; initializes once in the browser
@@ -77,28 +85,28 @@ export async function getClientAuthSafe(): Promise<Auth | null> {
   if (typeof window === "undefined") return null;
   if (cachedAuth) return cachedAuth;
 
-  const app = await initializeFirebase();
-  if (!app) return null;
-
   try {
-    cachedAuth = initializeAuth(app, {
-      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
-      popupRedirectResolver: browserPopupRedirectResolver,
-    });
-    console.log("[Firebase] Auth initialized (browser, custom persistence + resolver)");
-  } catch {
-    cachedAuth = getAuth(app);
-    console.log("[Firebase] Using existing Auth instance");
+    const app = await initializeFirebase();
+    if (!app) return null;
+
+    try {
+      // Try to initialize auth with custom configuration first
+      cachedAuth = initializeAuth(app, {
+        persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+        popupRedirectResolver: browserPopupRedirectResolver,
+      });
+    } catch {
+      // If auth is already initialized, get the existing instance
+      cachedAuth = getAuth(app);
+    }
+    
+    console.log("[Firebase] Auth initialized successfully");
+    return cachedAuth;
+  } catch (error) {
+    console.error("[Firebase] Auth initialization failed:", error);
+    return null;
   }
 
-  // Set up auth state listener to sync user data with Firestore
-  onAuthStateChanged(cachedAuth, async (user) => {
-    if (user) {
-      await syncUserData(user);
-    }
-  });
-
-  return cachedAuth;
 }
 
 // Sync user data with Firestore
