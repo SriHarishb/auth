@@ -5,9 +5,19 @@ import {
   indexedDBLocalPersistence,
   browserLocalPersistence,
   browserPopupRedirectResolver,
+  onAuthStateChanged,
   type Auth,
+  type User,
 } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc,
+  type Firestore 
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCRFmM4Tr-lMDp0ZaktN3OnZV3z4G4-zAw",
@@ -19,7 +29,11 @@ const firebaseConfig = {
   measurementId: "G-XTVVZD55FJ",
 };
 
+// Initialize Firebase
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// Initialize Firestore
+export const db = getFirestore(app);
 
 let cachedAuth: Auth | null = null;
 
@@ -31,14 +45,48 @@ export function getClientAuthSafe(): Auth | null {
   try {
     cachedAuth = initializeAuth(app, {
       persistence: [indexedDBLocalPersistence, browserLocalPersistence],
-      popupRedirectResolver: browserPopupRedirectResolver, // harmless even if using popup only
+      popupRedirectResolver: browserPopupRedirectResolver,
     });
     console.log("[Firebase] Auth initialized (browser, custom persistence + resolver)");
   } catch {
     cachedAuth = getAuth(app);
     console.log("[Firebase] Using existing Auth instance");
   }
+
+  // Set up auth state listener to sync user data with Firestore
+  onAuthStateChanged(cachedAuth, async (user) => {
+    if (user) {
+      await syncUserData(user);
+    }
+  });
+
   return cachedAuth;
+}
+
+// Sync user data with Firestore
+async function syncUserData(user: User) {
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      // Create new user document if it doesn't exist
+      await setDoc(userRef, {
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+      });
+    } else {
+      // Update last login time
+      await setDoc(userRef, {
+        lastLogin: new Date().toISOString(),
+      }, { merge: true });
+    }
+  } catch (error) {
+    console.error('Error syncing user data:', error);
+  }
 }
 
 // Guard Analytics for Next.js environments
